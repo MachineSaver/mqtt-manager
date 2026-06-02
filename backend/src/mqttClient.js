@@ -82,6 +82,11 @@ function publish(topic, message) {
     }
     const { topic: outTopic, message: outMessage } = adapter.normalizeOutgoing(topic, message);
     client.publish(outTopic, outMessage);
+    
+    // Explicitly track outbound publishes because LNS brokers often do not echo commands back to subscribers
+    messageTracker.trackMessage(topic, message).catch(e => 
+        log.error({ err: e }, 'Failed to locally track published downlink')
+    );
 }
 
 function isConnected() {

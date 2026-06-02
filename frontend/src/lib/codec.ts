@@ -1,4 +1,4 @@
-import { encodeDownlink as rawEncode, decodeDownlink as rawDecode } from './airvibeCodec.js';
+import { encodeDownlink as rawEncode, decodeDownlink as rawDecode, decodeConfigPayloadHex as rawDecodeHex } from './airvibeCodec.js';
 
 export interface EncodeResult {
   fPort: number | null;
@@ -19,6 +19,10 @@ export function encodeDownlink(input: { fPort: number; data: Record<string, unkn
 
 export function decodeDownlink(input: { fPort: number; bytes: number[] }): DecodeResult {
   return rawDecode(input) as DecodeResult;
+}
+
+export function decodeConfigPayloadHex(hexStr: string): Record<string, any> | null {
+  return rawDecodeHex(hexStr);
 }
 
 export function bytesToHex(bytes: number[]): string {

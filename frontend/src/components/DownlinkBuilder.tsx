@@ -56,7 +56,7 @@ export default function DownlinkBuilder({ socket, messages }: DownlinkBuilderPro
 
   const fetchDevices = useCallback(async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const apiUrl = (typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'));
       const res = await fetch(`${apiUrl}/api/devices`);
       const data = await res.json();
       setApiDevEuis(data.map((d: { dev_eui: string }) => d.dev_eui));

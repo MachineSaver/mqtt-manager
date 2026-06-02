@@ -214,7 +214,7 @@ class WaveformManager {
 
         if (missing.length === 0) {
             // Complete!
-            await this.assembleWaveform(waveformId);
+            await this.assembleWaveform(waveformId, wf.metadata);
             log.info(`Waveform ${devEui} TxID ${txId} Complete!`);
 
             // Send Data ACK via codec (rate-limited — Class A can only receive one downlink per uplink)
@@ -280,7 +280,7 @@ class WaveformManager {
         }
     }
 
-    async assembleWaveform(waveformId) {
+    async assembleWaveform(waveformId, metadata) {
         const res = await pool.query(`
             SELECT data FROM waveform_segments
             WHERE waveform_id = $1
@@ -290,13 +290,58 @@ class WaveformManager {
         const fullBuffer = Buffer.concat(res.rows.map(r => r.data));
 
         // Store as BYTEA (final_data_bytes) — halves storage cost vs JSONB hex string.
-        // final_data is set to NULL for new rows; old rows retain their JSONB value
-        // and are handled via fallback in the read endpoints.
         await pool.query(`
             UPDATE waveforms
             SET status = 'complete', final_data_bytes = $1, final_data = NULL
             WHERE id = $2
         `, [fullBuffer, waveformId]);
+
+        // Process Spectrums
+        try {
+            const { processWaveformToSpectrums } = require('../utils/fft');
+            // Assuming default 8G accel range, but it could be parsed from metadata if available later
+            const spectrums = processWaveformToSpectrums(
+                fullBuffer, 
+                metadata.axisMask, 
+                metadata.sampleRate || metadata.sampling_rate_hz || 10000, 
+                8
+            );
+
+            const allPeaks = {};
+
+            for (const spec of spectrums) {
+                if (spec.peaks) {
+                    allPeaks[spec.axis] = spec.peaks;
+                }
+                
+                await pool.query(`
+                    INSERT INTO waveform_spectrums 
+                    (waveform_id, spectrum_type, axis, resolution_hz, max_frequency_hz, data_bytes)
+                    VALUES ($1, 'acceleration', $2, $3, $4, $5),
+                           ($1, 'velocity', $2, $3, $4, $6),
+                           ($1, 'envelope', $2, $3, $4, $7)
+                    ON CONFLICT (waveform_id, spectrum_type, axis) DO NOTHING
+                `, [
+                    waveformId, 
+                    spec.axis, 
+                    spec.resolutionHz, 
+                    spec.maxFrequencyHz, 
+                    spec.accelerationBytes, 
+                    spec.velocityBytes,
+                    spec.envelopeBytes
+                ]);
+            }
+            
+            // Re-sync peaks metadata into the parent waveform row
+            if (Object.keys(allPeaks).length > 0) {
+                metadata.peaks = allPeaks;
+                await pool.query(`UPDATE waveforms SET metadata = $1 WHERE id = $2`, [metadata, waveformId]);
+            }
+            
+            log.info(`FFT Spectrums (Velocity & Acceleration) calculated and stored for waveform ${waveformId}`);
+        } catch (err) {
+            log.error({ err }, `Error processing spectrums for waveform ${waveformId}`);
+        }
     }
 
     async findPendingWaveformId(devEui, txId) {

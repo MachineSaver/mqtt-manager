@@ -26,7 +26,7 @@ export default function MQTTMonitor({ messages, socket }: MQTTMonitorProps) {
   const [collapseKey, setCollapseKey] = useState(0);
   const [expandKey, setExpandKey] = useState(0);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const apiUrl = (typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'));
 
   const fetchStats = useCallback(async () => {
     try {

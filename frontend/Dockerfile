@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package*.json ./
 
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci
+    npm install
 
 # ---
 
@@ -37,7 +37,7 @@ WORKDIR /app
 RUN addgroup -g 1001 -S nextjs && \
     adduser -S nextjs -u 1001 -G nextjs
 
-COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nextjs /app/public ./public
 COPY --from=builder --chown=nextjs:nextjs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nextjs /app/.next/static ./.next/static
 

@@ -85,6 +85,10 @@ class MessageTracker {
                     tpm_fw:           `${tpmRaw >>> 8}.${tpmRaw & 0xFF}`,
                     push_period_min:  pushMin,
                     config_updated_at: new Date().toISOString(),
+                    vibration_config: {
+                        high_pass_filter_hz: buf[12] | (buf[13] << 8),
+                        low_pass_filter_hz: buf[14] | (buf[15] << 8)
+                    }
                 };
                 pool.query(
                     `UPDATE devices SET metadata = metadata || $1::jsonb WHERE dev_eui = $2`,

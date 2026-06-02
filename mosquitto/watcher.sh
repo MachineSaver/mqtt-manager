@@ -12,6 +12,8 @@ create_nossl_conf() {
 persistence true
 persistence_location /mosquitto/data/
 log_dest stdout
+user root
+
 
 max_connections 100
 max_inflight_messages 20

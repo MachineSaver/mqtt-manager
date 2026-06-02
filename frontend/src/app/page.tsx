@@ -1,17 +1,39 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SocketProvider, useSocket } from './SocketContext';
 import MQTTMonitor from '@/components/MQTTMonitor';
 import WaveformsView from '@/components/WaveformsView';
 import FUOTAManager from '@/components/FUOTAManager';
 import DevTools from '@/components/DevTools';
 import Historian from '@/components/Historian';
+import AnalysisDashboard from '@/components/AnalysisDashboard';
 
 function AppContent() {
   const { connected, messages, socket } = useSocket();
-  const [activeView, setActiveView] = useState<'mqtt' | 'waveforms' | 'fuota' | 'devtools' | 'historian' | 'docs'>('mqtt');
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const [activeView, setActiveView] = useState<'mqtt' | 'waveforms' | 'fuota' | 'devtools' | 'historian' | 'analysis' | 'docs'>('mqtt');
+  const apiUrl = (typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'));
+  
+  const [configNotification, setConfigNotification] = useState<{devEui: string, time: string} | null>(null);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      const latestMsg = messages[0];
+      try {
+        const payload = JSON.parse(latestMsg.payload);
+        // Depending on backend structure, data might be nested inside "object" (ChirpStack v4) or direct
+        const dataObj = payload.object || payload;
+        
+        if (dataObj && dataObj.packet_type === 4) {
+          const devEui = payload.deviceInfo?.devEui || payload.devEui || 'Unknown Device';
+          setConfigNotification({ devEui, time: new Date().toLocaleTimeString() });
+          
+          // Auto clear after 10 seconds
+          setTimeout(() => setConfigNotification(null), 10000);
+        }
+      } catch(e) { /* ignore parse errors */ }
+    }
+  }, [messages]);
 
   return (
     <div className="flex h-screen bg-[#1e1e1e] text-gray-300 font-sans">
@@ -72,6 +94,15 @@ function AppContent() {
           </svg>
         </button>
 
+        {/* Analysis */}
+        <button
+          onClick={() => setActiveView('analysis')}
+          className={`p-3 mb-2 rounded-lg ${activeView === 'analysis' ? 'bg-[#37373d] text-emerald-400' : 'hover:bg-[#2d2d2d] text-gray-400'}`}
+          title="Analysis"
+        >
+          <div className="h-6 w-6 flex items-center justify-center text-xl font-bold font-serif">A</div>
+        </button>
+
         {/* API Docs */}
         <button
           onClick={() => setActiveView('docs')}
@@ -94,6 +125,7 @@ function AppContent() {
               : activeView === 'fuota' ? 'FUOTA Manager'
               : activeView === 'devtools' ? 'Dev Tools'
               : activeView === 'historian' ? 'Historian'
+              : activeView === 'analysis' ? 'Analysis Dashboard'
               : 'API Documentation'}
           </h1>
           <div className="flex items-center space-x-2">
@@ -118,6 +150,8 @@ function AppContent() {
 
           {activeView === 'historian' && <Historian />}
 
+          {activeView === 'analysis' && <AnalysisDashboard />}
+
           {activeView === 'docs' && (
             <iframe
               src={`${apiUrl}/api/docs/`}
@@ -134,6 +168,28 @@ function AppContent() {
           </span>
         </div>
       </div>
+
+      {/* Global Config Notification Overlay */}
+      {configNotification && (
+        <div className="fixed bottom-10 right-10 z-[200] max-w-sm w-full bg-emerald-900/90 border border-emerald-500 rounded-lg shadow-[0_0_20px_rgba(16,185,129,0.3)] p-4 text-emerald-100 flex items-start space-x-3 isolate overflow-hidden transform transition-all duration-500 ease-in-out">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-400/10 to-transparent -translate-x-full animate-pulse"></div>
+          
+          <div className="flex-shrink-0 pt-0.5">
+            <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-bold tracking-wider text-emerald-300 uppercase mb-1">Configuration Synced</h3>
+            <p className="text-xs leading-relaxed text-emerald-100/90">
+              Sensor <span className="font-mono bg-emerald-950/50 px-1 rounded text-emerald-400">{configNotification.devEui}</span> just acknowledged config uplink at {configNotification.time}.
+            </p>
+          </div>
+          <button onClick={() => setConfigNotification(null)} className="flex-shrink-0 text-emerald-500 hover:text-emerald-300 transition-colors">
+             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

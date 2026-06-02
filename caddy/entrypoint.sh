@@ -13,11 +13,12 @@ NETWORK_SERVER="${NETWORK_SERVER:-chirpstack}"
 if [ "$NETWORK_SERVER" = "chirpstack" ] || [ "$DOMAIN" = "localhost" ]; then
     TLS_LINE="    tls internal"
 else
-    TLS_LINE="    # tls: automatic ACME via Let's Encrypt for ${DOMAIN}"
+    TLS_LINE="    tls internal
+    # automatic ACME via Let's Encrypt for ${DOMAIN}"
 fi
 
 cat > /etc/caddy/Caddyfile << EOF
-${DOMAIN} {
+${DOMAIN}, 192.168.1.175, localhost, 127.0.0.1 {
 ${TLS_LINE}
 
     reverse_proxy /api/*       backend:4000

@@ -10,6 +10,8 @@ var CODEC_VERSION = "2.1.2";
 
 var PUSH_MODE_ID = { 1: "overall_only", 2: "waveform_only", 3: "overall_and_waveform" };
 var WINDOW_ID    = { 0: "none", 1: "hanning", 2: "inverse_hanning", 3: "hamming", 4: "inverse_hamming" };
+var HW_FILTER_ID = { 0: "none", 23: "hp_33_hz", 22: "hp_67_hz", 21: "hp_134_hz", 20: "hp_267_hz", 19: "hp_593_hz", 18: "hp_1335_hz", 17: "hp_2670_hz", 135: "lp_33_hz", 134: "lp_67_hz", 133: "lp_134_hz", 132: "lp_267_hz", 131: "lp_593_hz", 130: "lp_1335_hz", 129: "lp_2670_hz", 128: "lp_6675_hz" };
+
 // AXIS_LABELS is used only by decodeUplink (not included in frontend copy)
 // var AXIS_LABELS = { ... };
 
@@ -227,4 +229,39 @@ function decodeDownlink(input) {
   return res;
 }
 
-export { encodeDownlink, decodeDownlink, CODEC_VERSION };
+function decodeConfigPayloadHex(hexStr) {
+    if (!hexStr || hexStr.length < 40) return null;
+    var b = [];
+    for (var i = 0; i < hexStr.length; i += 2) b.push(parseInt(hexStr.substr(i, 2), 16));
+    var type = u8(b, 0);
+    if (type !== 4) return null;
+
+    var alarmMask = u16(b, 19);
+    var axisMask = u8(b, 3);
+    
+    return {
+        packet_type: 4,
+        device_settings: {
+            push_mode: PUSH_MODE_ID[u8(b, 2)] || "unknown",
+            accel_range_g: u8(b, 4),
+            hw_filter: HW_FILTER_ID[u8(b, 5)] || "unknown",
+            machine_off_threshold_mg: u16(b, 39)
+        },
+        vibration_config: {
+            overall_push_period_min: u16(b, 8),
+            high_pass_filter_hz: u16(b, 12),
+            low_pass_filter_hz: u16(b, 14),
+            window_function: WINDOW_ID[u8(b, 16)] || "unknown"
+        },
+        waveform_config: {
+            push_period_min: u16(b, 6),
+            samples_per_axis: u16(b, 10),
+            active_axes: { axis_1: !!(axisMask & 1), axis_2: !!(axisMask & 2), axis_3: !!(axisMask & 4) }
+        },
+        alarms: {
+            test_period_min: u16(b, 17)
+        }
+    };
+}
+
+export { encodeDownlink, decodeDownlink, decodeConfigPayloadHex, CODEC_VERSION };

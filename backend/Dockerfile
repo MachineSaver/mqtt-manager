@@ -7,7 +7,7 @@ COPY package*.json ./
 RUN apk add --no-cache openssl
 
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev
+    npm install --omit=dev
 
 # ---
 
@@ -20,7 +20,7 @@ RUN apk add --no-cache openssl su-exec && \
     adduser -S nodeapp -u 1001 -G nodeapp
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY --chown=nodeapp:nodeapp . .
 
 RUN chmod +x /app/entrypoint.sh
 

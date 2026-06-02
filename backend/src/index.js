@@ -34,6 +34,16 @@ const domain = process.env.DOMAIN || 'localhost';
         }
     }
 
+    // Initialize PKI first so Mosquitto can start if it depends on certs
+    try {
+        log.info(`Checking/Initializing PKI for domain: ${domain}`);
+        await pki.generateCA(domain);
+        await pki.generateServerCert(domain);
+        log.info('PKI Initialized');
+    } catch (e) {
+        log.error({ err: e }, 'Failed to initialize PKI');
+    }
+
     // Start MQTT connection before FUOTA init so that _waitForMqtt() in the
     // recovery loop has an active connection to poll against.
     const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883';
@@ -43,15 +53,6 @@ const domain = process.env.DOMAIN || 'localhost';
     });
 
     await fuotaManager.init(io);
-
-    try {
-        log.info(`Checking/Initializing PKI for domain: ${domain}`);
-        await pki.generateCA(domain);
-        await pki.generateServerCert(domain);
-        log.info('PKI Initialized');
-    } catch (e) {
-        log.error({ err: e }, 'Failed to initialize PKI');
-    }
 })();
 
 server.listen(port, () => {

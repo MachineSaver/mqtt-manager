@@ -18,7 +18,7 @@ export default function SensorSimulator() {
   const [demoMinutes, setDemoMinutes] = useState(5);
   const [showLog, setShowLog] = useState(false);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const apiUrl = (typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'));
 
   const fetchDemoStatus = useCallback(async () => {
     try {

@@ -244,9 +244,10 @@ const WAVEFORM_SELECT_COLS =
 // Filter spec for GET /api/devices/:devEui/messages (device_eui is a hard-wired
 // path param, so it is intentionally absent here to avoid double-binding it).
 const DEVICE_MESSAGE_FILTER_SPEC = [
-    { param: 'direction', column: 'direction' },
-    { param: 'from',      column: 'received_at', op: '>=' },
-    { param: 'to',        column: 'received_at', op: '<=' },
+    { param: 'direction',   column: 'direction' },
+    { param: 'packet_type', column: 'packet_type' },
+    { param: 'from',        column: 'received_at', op: '>=' },
+    { param: 'to',          column: 'received_at', op: '<=' },
 ];
 
 // Filter spec for GET /api/messages
@@ -466,6 +467,7 @@ app.get('/api/devices/:devEui/messages', async (req, res) => {
         const { where } = buildWhereClause(
             DEVICE_MESSAGE_FILTER_SPEC, req.query, params, ['device_eui = $1'],
         );
+        console.log("WHERE CLAUSE DEBUG", { where, params: [...params], query: req.query });
         const { limit, offset } = parsePagination(req.query, { maxLimit: 1000, defaultLimit: 100 });
         await sendPagedList({
             table: 'messages', select: '*',
@@ -744,6 +746,16 @@ app.delete('/api/keys/:id', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+// ---------------------------------------------------------------------------
+// Routes — hierarchy
+// ---------------------------------------------------------------------------
+
+const hierarchyRouter = require('./routes/hierarchy');
+app.use('/api/hierarchy', hierarchyRouter);
+
+const analyticsRouter = require('./routes/analytics');
+app.use('/api/analytics', analyticsRouter);
 
 // ---------------------------------------------------------------------------
 // Routes — API documentation

@@ -230,7 +230,7 @@ function formatObservedEta(
 // ---------------------------------------------------------------------------
 
 export default function FUOTAManager({ socket }: Props) {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const apiUrl = (typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'));
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [firmwareInfo, setFirmwareInfo] = useState<FirmwareInfo | null>(null);

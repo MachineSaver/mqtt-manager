@@ -142,3 +142,70 @@ BEGIN
             NOT VALID;
     END IF;
 END $$;
+
+-- Predictive Monitoring Hierarchy Tables
+CREATE TABLE IF NOT EXISTS plants (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL UNIQUE,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS areas (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    plant_id UUID NOT NULL REFERENCES plants(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(plant_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS sectors (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    area_id UUID NOT NULL REFERENCES areas(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(area_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS machines (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    sector_id UUID NOT NULL REFERENCES sectors(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(sector_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS components (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    machine_id UUID NOT NULL REFERENCES machines(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(machine_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS sensor_locations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    component_id UUID NOT NULL REFERENCES components(id) ON DELETE CASCADE,
+    device_eui VARCHAR(50) NOT NULL REFERENCES devices(dev_eui) ON DELETE CASCADE,
+    location_designation VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(component_id, device_eui)
+);
+
+-- Spectrum Data Storage
+CREATE TABLE IF NOT EXISTS waveform_spectrums (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    waveform_id UUID NOT NULL REFERENCES waveforms(id) ON DELETE CASCADE,
+    spectrum_type VARCHAR(50) NOT NULL CHECK (spectrum_type IN ('velocity', 'acceleration', 'envelope')),
+    axis VARCHAR(10) NOT NULL CHECK (axis IN ('axis_1', 'axis_2', 'axis_3')),
+    resolution_hz DOUBLE PRECISION NOT NULL,
+    max_frequency_hz DOUBLE PRECISION NOT NULL,
+    data_bytes BYTEA NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(waveform_id, spectrum_type, axis)
+);
+

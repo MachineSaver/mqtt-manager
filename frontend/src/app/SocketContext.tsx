@@ -30,7 +30,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     const [messages, setMessages] = useState<MQTTMessage[]>([]);
 
     useEffect(() => {
-        const socketUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+        const socketUrl = (typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'));
         const newSocket = io(socketUrl);
 
         newSocket.on('connect', () => {

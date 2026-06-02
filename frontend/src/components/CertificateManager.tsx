@@ -16,7 +16,7 @@ export default function CertificateManager() {
   const [clientId, setClientId] = useState('');
   const [certResult, setCertResult] = useState<CertResult | null>(null);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const apiUrl = (typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'));
 
   const generateCerts = async () => {
     try {

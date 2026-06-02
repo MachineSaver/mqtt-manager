@@ -43,16 +43,15 @@ async function generateCA(domain) {
         return { success: true, message: 'CA already exists' };
     }
 
-    const subject = `/C=US/ST=State/L=City/O=MyOrg/OU=IoT/CN=${domain}`;
+    const subject = `/C=US/ST=State/L=City/O=MyOrg/OU=IoT/CN=${domain} Root CA`;
 
     try {
-        await execFilePromise('openssl', ['genrsa', '-out', caKeyPath, '2048']);
-        fs.chmodSync(caKeyPath, 0o600);
         await execFilePromise('openssl', [
-            'req', '-x509', '-new', '-nodes',
-            '-key', caKeyPath, '-sha256', '-days', '3650',
-            '-out', caCrtPath, '-subj', subject
+            'req', '-x509', '-newkey', 'rsa:2048', '-nodes',
+            '-keyout', caKeyPath, '-out', caCrtPath,
+            '-days', '3650', '-subj', subject
         ]);
+        fs.chmodSync(caKeyPath, 0o600);
 
         return { success: true, message: 'CA Generated' };
     } catch (error) {
@@ -66,6 +65,8 @@ async function generateServerCert(domain) {
 
     const serverKeyPath = path.join(CERTS_DIR, 'server.key');
     const serverCrtPath = path.join(CERTS_DIR, 'server.crt');
+    const caKeyPath = path.join(CERTS_DIR, 'ca.key');
+    const caCrtPath = path.join(CERTS_DIR, 'ca.crt');
 
     if (fs.existsSync(serverKeyPath) && fs.existsSync(serverCrtPath)) {
         log.info('Server Certificate already exists. Skipping generation.');
@@ -77,23 +78,16 @@ async function generateServerCert(domain) {
     const serverExtPath = path.join(CERTS_DIR, 'server.ext');
 
     try {
-        // Write SAN extension file so TLS clients can verify the hostname
-        fs.writeFileSync(serverExtPath, `subjectAltName=DNS:${domain}\n`);
+        const net = require('net');
+        const isIp = net.isIP(domain);
+        const sanPrefix = isIp ? 'IP' : 'DNS';
+        fs.writeFileSync(serverExtPath, `subjectAltName=${sanPrefix}:${domain}\n`);
 
-        await execFilePromise('openssl', ['genrsa', '-out', serverKeyPath, '2048']);
+        await execFilePromise('openssl', ['req', '-newkey', 'rsa:2048', '-nodes', '-keyout', serverKeyPath, '-out', serverCsrPath, '-subj', subject]);
         fs.chmodSync(serverKeyPath, 0o600);
-        await execFilePromise('openssl', [
-            'req', '-new', '-key', serverKeyPath,
-            '-out', serverCsrPath, '-subj', subject
-        ]);
-        await execFilePromise('openssl', [
-            'x509', '-req', '-in', serverCsrPath,
-            '-CA', path.join(CERTS_DIR, 'ca.crt'),
-            '-CAkey', path.join(CERTS_DIR, 'ca.key'),
-            '-CAcreateserial', '-out', serverCrtPath,
-            '-days', '365', '-sha256',
-            '-extfile', serverExtPath
-        ]);
+        await execFilePromise('openssl', ['x509', '-req', '-in', serverCsrPath, '-CA', caCrtPath, '-CAkey', caKeyPath, '-CAcreateserial', '-out', serverCrtPath, '-days', '365', '-extfile', serverExtPath]);
+        
+        if (fs.existsSync(serverExtPath)) fs.unlinkSync(serverExtPath);
 
         return { success: true, message: 'Server Cert Generated' };
     } catch (error) {

@@ -51,7 +51,7 @@ export default function WaveformsView() {
 
     const fetchDevices = useCallback(async () => {
         try {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+            const apiUrl = (typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'));
             const res = await fetch(`${apiUrl}/api/devices`);
             setDevices(await res.json());
         } catch {
@@ -61,7 +61,7 @@ export default function WaveformsView() {
 
     const fetchWaveforms = useCallback(async () => {
         try {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+            const apiUrl = (typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'));
             const res = await fetch(`${apiUrl}/api/waveforms`);
             const data = await res.json();
             setWaveforms(data);
@@ -72,7 +72,7 @@ export default function WaveformsView() {
 
     const fetchWaveformDetail = useCallback(async (id: string) => {
         try {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+            const apiUrl = (typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'));
             const res = await fetch(`${apiUrl}/api/waveforms/${id}`);
             const data = await res.json();
             setSelectedWaveform(data);
@@ -250,7 +250,7 @@ export default function WaveformsView() {
                                         <div className="flex flex-wrap gap-2">
                                             <button
                                                 onClick={() => {
-                                                    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+                                                    const apiUrl = (typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'));
                                                     window.open(`${apiUrl}/api/waveforms/${selectedWaveform.id}/download`, '_blank');
                                                 }}
                                                 className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded text-xs font-semibold transition-colors flex items-center gap-1"
@@ -262,7 +262,7 @@ export default function WaveformsView() {
                                             </button>
                                             <button
                                                 onClick={() => {
-                                                    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+                                                    const apiUrl = (typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'));
                                                     window.open(`${apiUrl}/api/waveforms/${selectedWaveform.id}/csv`, '_blank');
                                                 }}
                                                 className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded text-xs font-semibold transition-colors flex items-center gap-1"
